@@ -110,24 +110,28 @@ const Upload = ({ addUploadedFile }) => {
   };
   // Decrypt the file using MetaMask
   const decryptFile = async (encryptedData, walletAddress) => {
-    console.log("Decrypting file...");
     try {
       const decrypted = await window.ethereum.request({
         method: "eth_decrypt",
         params: [encryptedData, walletAddress],
       });
-      console.log("Decrypted Data: ", decrypted);
 
-      // download the decrypted data using the browser
+      const decryptedBuffer = Buffer.from(decrypted, "base64");
+
+      // Create a downloadable link for the decrypted image
+      const blob = new Blob([decryptedBuffer], { type: "image/png" });
+      const url = window.URL.createObjectURL(blob);
+
       const element = document.createElement("a");
-      const file = new Blob([decrypted], { type: "text/png" });
-      element.href = URL.createObjectURL(file);
+      element.href = url;
       element.download = "decrypted.png";
-      document.body.appendChild(element); // Required for this to work in FireFox
+      document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
 
-      return decrypted;
+      setDecryptedData(url);
+
+      return decryptedBuffer;
     } catch (error) {
       console.error("Error decrypting file:", error);
     }
@@ -198,7 +202,9 @@ const Upload = ({ addUploadedFile }) => {
           <Typography variant="h6" style={{ marginTop: "20px" }}>
             Decrypted File Content:
           </Typography>
-          <pre>{decryptedData}</pre>
+          <a href={decryptedData} download="decrypted.png">
+            Download Decrypted File
+          </a>
         </div>
       )}
     </div>

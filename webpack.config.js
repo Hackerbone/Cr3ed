@@ -16,11 +16,19 @@ const config = {
   entry: "./src/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
+    filename: "bundle.js",
+    publicPath: "/", // Important: this ensures correct routing
   },
   devServer: {
+    historyApiFallback: true, // This line is important for SPA routing
+    static: {
+      directory: path.join(__dirname, "public"),
+    },
     open: true,
     host: "localhost",
+    port: 8081, // You can change the port if needed
   },
+
   plugins: [
     new HtmlWebpackPlugin({
       template: "./public/index.html",
