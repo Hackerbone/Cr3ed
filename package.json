@@ -27,7 +27,7 @@
   },
   "scripts": {
     "start": "webpack serve --config webpack.config.js --mode development",
-    "build": "webpack --mode production",
+    "build": "webpack --mode production --env VERCEL_ENV=$VERCEL_ENV --env production",
     "build:prod": "webpack --mode production",
     "build:dev": "webpack --mode=development",
     "test": "GENERATE_SOURCEMAP=false react-scripts test",
