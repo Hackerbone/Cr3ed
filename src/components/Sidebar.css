@@ -1,0 +1,18 @@
+/* src/components/Sidebar.css */
+.sidebar-link {
+  text-decoration: none;
+  color: #fff;
+}
+
+.sidebar-link:hover {
+  background-color: #444; /* Hover effect */
+}
+
+.sidebar-link.active {
+  background-color: #555; /* Active link color (dark background) */
+  color: #fff;
+}
+
+.sidebar-link .MuiListItemIcon-root {
+  color: #fff; /* Ensure icons also remain white */
+}
