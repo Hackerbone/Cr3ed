@@ -9,10 +9,26 @@
 }
 
 .sidebar-link.active {
-  background-color: #555; /* Active link color (dark background) */
+  background-color: #555; /* Active link color */
   color: #fff;
 }
 
-.sidebar-link .MuiListItemIcon-root {
-  color: #fff; /* Ensure icons also remain white */
+.sidebar {
+  width: 250px;
+  background-color: #1f1f1f; /* Dark background */
+  height: 100vh;
+  color: #fff;
+}
+
+.sidebar-icon {
+  color: #fff;
+}
+
+.sidebar-logo {
+  padding: 20px;
+  text-align: center;
+  font-size: 1.5em;
+  font-weight: bold;
+  background-color: #ff9500; /* Orange logo background */
+  color: white;
 }
