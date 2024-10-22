@@ -11,6 +11,8 @@ const Upload = ({ addUploadedFile }) => {
   const [decryptedData, setDecryptedData] = useState(null); // To store decrypted data
   const projectId = process.env.REACT_APP_INFURA_PROJECT_ID;
   const projectSecret = process.env.REACT_APP_INFURA_PROJECT_SECRET;
+  console.log("Project ID: ", projectId);
+  console.log("Project Secret: ", projectSecret);
   const authorization =
     "Basic " + Buffer.from(projectId + ":" + projectSecret).toString("base64");
 
