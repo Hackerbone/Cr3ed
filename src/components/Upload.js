@@ -9,8 +9,8 @@ const Upload = ({ addUploadedFile }) => {
   const [ipfsUrl, setIpfsUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [decryptedData, setDecryptedData] = useState(null); // To store decrypted data
-  const projectId = process.env.REACT_APP_INFURA_PROJECT_ID;
-  const projectSecret = process.env.REACT_APP_INFURA_PROJECT_SECRET;
+  const projectId = "2IOUFPp6jaCvviGV7nMOkXaRtab";
+  const projectSecret = "37d7e98f26e5136a5f6a6055fc1ca7db";
   console.log("Project ID: ", projectId);
   console.log("Project Secret: ", projectSecret);
   const authorization =
