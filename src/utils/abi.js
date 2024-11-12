@@ -3,6 +3,17 @@ export const contractABI = [
   {
     inputs: [
       {
+        internalType: "string",
+        name: "_orgName",
+        type: "string",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    inputs: [
+      {
         internalType: "address",
         name: "_employeeAddress",
         type: "address",
@@ -67,14 +78,32 @@ export const contractABI = [
         type: "string",
       },
       {
-        internalType: "string",
-        name: "_enckeyshash",
-        type: "string",
+        internalType: "address[]",
+        name: "_sharedWith",
+        type: "address[]",
+      },
+      {
+        internalType: "string[]",
+        name: "_encryptedSymmetricKeys",
+        type: "string[]",
       },
     ],
     name: "addFileToGroup",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "admin",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -106,43 +135,6 @@ export const contractABI = [
     name: "deleteEmployeeFromGroup",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_publicKey",
-        type: "string",
-      },
-    ],
-    name: "setPublicKey",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_orgName",
-        type: "string",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    inputs: [],
-    name: "admin",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {
@@ -251,14 +243,33 @@ export const contractABI = [
         name: "_groupName",
         type: "string",
       },
+      {
+        internalType: "uint256",
+        name: "_fileIndex",
+        type: "uint256",
+      },
+    ],
+    name: "getEncryptedSymmetricKey",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_groupName",
+        type: "string",
+      },
     ],
     name: "getFilesByGroup",
     outputs: [
-      {
-        internalType: "string[]",
-        name: "",
-        type: "string[]",
-      },
       {
         internalType: "string[]",
         name: "",
@@ -383,9 +394,22 @@ export const contractABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_publicKey",
+        type: "string",
+      },
+    ],
+    name: "setPublicKey",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ];
 
 // Contract Address (from Remix deployment)
-export const contractAddress = "0x04A9a67e6f0a3E34A53835a22A9452bfbD41C2A9";
+export const contractAddress = "0x8AF5500e512c1b81fc2F14A0a561aA57a58D1466";
 
 // https://sepolia.etherscan.io/tx/0xb35dd37c617570aa96eb408203f7799fd5fcccbd41418e7dec603e3bfdd0525a
