@@ -1,15 +1,20 @@
 import React, { useState } from "react";
-import { Button, Typography } from "@mui/material";
+import { Button, Typography, Upload, message } from "antd";
+import { UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Buffer } from "buffer";
 import { create as ipfsHttpClient } from "ipfs-http-client";
 import { encrypt } from "@metamask/eth-sig-util";
-import "./Upload.css"; // Import the CSS file
+import "./Upload.css";
 
-const Upload = ({ addUploadedFile }) => {
+const UploadComponent = ({ addUploadedFile }) => {
   const [fileName, setFileName] = useState("");
   const [ipfsUrl, setIpfsUrl] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [decrypting, setDecrypting] = useState(false);
   const [decryptedData, setDecryptedData] = useState(null);
+  const [fileType, setFileType] = useState(""); // Track file type
+
+  // Replace with your actual Infura project credentials
   const projectId = "2IOUFPp6jaCvviGV7nMOkXaRtab";
   const projectSecret = "37d7e98f26e5136a5f6a6055fc1ca7db";
   const authorization =
@@ -24,6 +29,7 @@ const Upload = ({ addUploadedFile }) => {
     },
   });
 
+  // Utility functions for data conversion
   function arrayBufferToBase64(buffer) {
     let binary = "";
     const bytes = new Uint8Array(buffer);
@@ -44,6 +50,7 @@ const Upload = ({ addUploadedFile }) => {
     return bytes.buffer;
   }
 
+  // Function to get the wallet's public key
   const getWalletPublicKey = async () => {
     try {
       const accounts = await window.ethereum.request({
@@ -64,6 +71,7 @@ const Upload = ({ addUploadedFile }) => {
     }
   };
 
+  // Function to encrypt the file
   const encryptFile = async (fileContent, publicKey) => {
     try {
       // Generate a random symmetric key
@@ -116,36 +124,49 @@ const Upload = ({ addUploadedFile }) => {
     }
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    setFileName(file.name);
+  // Handle file upload
+  const handleFileUpload = async (file) => {
+    try {
+      setUploading(true);
+      setFileName(file.name);
+      setFileType(file.type); // Set file type
+      const reader = new FileReader();
+      reader.readAsArrayBuffer(file);
 
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(file);
+      reader.onload = async (event) => {
+        try {
+          const fileContent = event.target.result;
+          const publicKey = await getWalletPublicKey();
+          const encryptedFile = await encryptFile(fileContent, publicKey);
 
-    reader.onload = async (event) => {
-      try {
-        const fileContent = event.target.result;
-        const publicKey = await getWalletPublicKey();
-        const encryptedFile = await encryptFile(fileContent, publicKey);
-
-        setLoading(true);
-        const encryptedFileBuffer = Buffer.from(JSON.stringify(encryptedFile));
-        const added = await client.add(encryptedFileBuffer);
-        const url = `https://ipfs.infura.io/ipfs/${added.path}`;
-        setIpfsUrl(url);
-        addUploadedFile({
-          name: file.name,
-          url: url,
-        });
-      } catch (error) {
-        console.error("Error in reader.onload:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+          const encryptedFileBuffer = Buffer.from(
+            JSON.stringify(encryptedFile)
+          );
+          const added = await client.add(encryptedFileBuffer);
+          const url = `https://ipfs.infura.io/ipfs/${added.path}`;
+          setIpfsUrl(url);
+          addUploadedFile({
+            name: file.name,
+            url: url,
+          });
+          message.success("File uploaded and encrypted successfully!");
+        } catch (error) {
+          console.error("Error in reader.onload:", error);
+          message.error("Error uploading file. Please try again.");
+        } finally {
+          setUploading(false);
+        }
+      };
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      message.error("Error uploading file. Please try again.");
+      setUploading(false);
+    }
+    // Return false to prevent default upload behavior
+    return false;
   };
 
+  // Decrypt the file
   const decryptFile = async (
     encryptedContent,
     encryptedSymmetricKeyHex,
@@ -188,9 +209,11 @@ const Upload = ({ addUploadedFile }) => {
     }
   };
 
-  const handleDecryptFile = async (ipfsUrl) => {
+  // Handle file decryption
+  const handleDecryptFile = async () => {
     if (!ipfsUrl) return;
     try {
+      setDecrypting(true);
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -216,49 +239,48 @@ const Upload = ({ addUploadedFile }) => {
         walletAddress
       );
 
-      // Create a Blob from the decrypted content and generate a download link
+      // Create a Blob from the decrypted content
       const blob = new Blob([decryptedContentArrayBuffer], {
-        type: "application/octet-stream",
+        type: fileType,
       });
       const url = window.URL.createObjectURL(blob);
       setDecryptedData(url);
+      message.success("File decrypted successfully!");
     } catch (error) {
       console.error("Error decrypting file from IPFS:", error);
+      message.error("Error decrypting file. Please try again.");
+    } finally {
+      setDecrypting(false);
     }
   };
 
   return (
     <div className="upload-container">
-      <Typography variant="h5" className="upload-title">
+      <Typography.Title level={2} className="upload-title">
         Upload a File to IPFS with Encryption
-      </Typography>
-      <div className="file-input-container">
-        <input
-          type="file"
-          id="file-input"
-          className="file-input"
-          onChange={handleFileChange}
-        />
-        <label htmlFor="file-input" className="file-input-label">
-          Choose file
-        </label>
-        <span className="file-name">{fileName || "No file chosen"}</span>
-      </div>
-      <Button
-        variant="contained"
-        color="primary"
-        className="upload-button"
-        disabled={loading}
-        onClick={() => document.getElementById("file-input").click()}
+      </Typography.Title>
+
+      <Upload
+        beforeUpload={handleFileUpload}
+        showUploadList={false}
+        multiple={false}
+        accept="*/*"
       >
-        {loading ? "Uploading..." : "Encrypt and Upload File"}
-      </Button>
+        <Button
+          type="primary"
+          icon={<UploadOutlined />}
+          loading={uploading}
+          disabled={uploading}
+        >
+          {uploading ? "Uploading..." : "Encrypt and Upload File"}
+        </Button>
+      </Upload>
 
       {ipfsUrl && (
         <div className="uploaded-file-container">
-          <Typography variant="h6" className="uploaded-file-title">
+          <Typography.Title level={5} className="uploaded-file-title">
             File uploaded to IPFS:
-          </Typography>
+          </Typography.Title>
           <a
             href={ipfsUrl}
             target="_blank"
@@ -267,34 +289,46 @@ const Upload = ({ addUploadedFile }) => {
           >
             {fileName} - {ipfsUrl}
           </a>
+          <br />
           <Button
-            variant="contained"
-            color="primary"
-            className="decrypt-button"
-            disabled={loading}
-            onClick={() => handleDecryptFile(ipfsUrl)}
+            type="primary"
+            icon={<DownloadOutlined />}
+            loading={decrypting}
+            disabled={decrypting}
+            onClick={handleDecryptFile}
+            style={{ marginTop: "10px" }}
           >
-            Decrypt File
+            {decrypting ? "Decrypting..." : "Decrypt File"}
           </Button>
         </div>
       )}
 
       {decryptedData && (
-        <div className="decrypted-file-container">
-          <Typography variant="h6" className="decrypted-file-title">
-            Decrypted File Content:
-          </Typography>
-          <a
-            href={decryptedData}
-            download={fileName}
-            className="decrypted-file-link"
-          >
-            Download Decrypted File
-          </a>
+        <div className="decrypted-file-container" style={{ marginTop: "20px" }}>
+          <Typography.Title level={5} className="decrypted-file-title">
+            Decrypted File:
+          </Typography.Title>
+          {fileType.startsWith("image/") ? (
+            <img
+              src={decryptedData}
+              alt="Decrypted file"
+              style={{ maxWidth: "100%", marginTop: "10px" }}
+            />
+          ) : (
+            <a
+              href={decryptedData}
+              download={fileName}
+              className="decrypted-file-link"
+            >
+              <Button type="primary" icon={<DownloadOutlined />}>
+                Download Decrypted File
+              </Button>
+            </a>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-export default Upload;
+export default UploadComponent;

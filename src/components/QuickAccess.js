@@ -2,6 +2,7 @@ import React from "react";
 import { Grid, Paper, Typography } from "@mui/material";
 import { Description as FileIcon } from "@mui/icons-material";
 import "./QuickAccess.css";
+import EmployeeManagement from "./EmployeeManagement";
 
 const QuickAccess = ({ uploadedFiles }) => {
   return (
@@ -25,6 +26,7 @@ const QuickAccess = ({ uploadedFiles }) => {
           </Grid>
         ))}
       </Grid>
+      <EmployeeManagement />
     </div>
   );
 };
