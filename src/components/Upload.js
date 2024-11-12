@@ -24,6 +24,26 @@ const Upload = ({ addUploadedFile }) => {
     },
   });
 
+  function arrayBufferToBase64(buffer) {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
+
+  function base64ToArrayBuffer(base64) {
+    const binary_string = window.atob(base64);
+    const len = binary_string.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
   const getWalletPublicKey = async () => {
     try {
       const accounts = await window.ethereum.request({
@@ -35,29 +55,64 @@ const Upload = ({ addUploadedFile }) => {
         params: [walletAddress],
       });
       if (!publicKey) {
-        console.error("Encryption public key not found");
-        return;
+        throw new Error("Encryption public key not found");
       }
       return publicKey;
     } catch (error) {
       console.error("Error fetching public key:", error);
+      throw error;
     }
   };
 
   const encryptFile = async (fileContent, publicKey) => {
     try {
-      const encryptedMessage = encrypt({
+      // Generate a random symmetric key
+      const symmetricKey = window.crypto.getRandomValues(new Uint8Array(32));
+
+      // Import the symmetric key
+      const cryptoKey = await window.crypto.subtle.importKey(
+        "raw",
+        symmetricKey,
+        "AES-GCM",
+        false,
+        ["encrypt"]
+      );
+
+      // Encrypt the file content using the symmetric key
+      const iv = window.crypto.getRandomValues(new Uint8Array(12)); // 96-bit nonce for AES-GCM
+      const encryptedContentArrayBuffer = await window.crypto.subtle.encrypt(
+        {
+          name: "AES-GCM",
+          iv: iv,
+          tagLength: 128,
+        },
+        cryptoKey,
+        fileContent
+      );
+
+      // Encrypt the symmetric key using the public key
+      const encryptedSymmetricKeyObject = encrypt({
         publicKey,
-        data: Buffer.from(fileContent).toString("base64"),
+        data: arrayBufferToBase64(symmetricKey),
         version: "x25519-xsalsa20-poly1305",
       });
-      const encryptedBuffer = Buffer.from(
-        JSON.stringify(encryptedMessage),
-        "utf-8"
-      );
-      return encryptedBuffer;
+
+      // Convert the encrypted symmetric key object to hex string
+      const encryptedSymmetricKeyHex =
+        "0x" +
+        Buffer.from(
+          JSON.stringify(encryptedSymmetricKeyObject),
+          "utf8"
+        ).toString("hex");
+
+      return {
+        encryptedContent: arrayBufferToBase64(encryptedContentArrayBuffer),
+        encryptedSymmetricKey: encryptedSymmetricKeyHex,
+        iv: arrayBufferToBase64(iv),
+      };
     } catch (error) {
-      console.error("Error encrypting file: ", error);
+      console.error("Error encrypting file:", error);
+      throw error;
     }
   };
 
@@ -69,46 +124,67 @@ const Upload = ({ addUploadedFile }) => {
     reader.readAsArrayBuffer(file);
 
     reader.onload = async (event) => {
-      const fileContent = event.target.result;
-      const publicKey = await getWalletPublicKey();
-      const encryptedFile = await encryptFile(fileContent, publicKey);
-
       try {
+        const fileContent = event.target.result;
+        const publicKey = await getWalletPublicKey();
+        const encryptedFile = await encryptFile(fileContent, publicKey);
+
         setLoading(true);
-        const added = await client.add(encryptedFile);
+        const encryptedFileBuffer = Buffer.from(JSON.stringify(encryptedFile));
+        const added = await client.add(encryptedFileBuffer);
         const url = `https://ipfs.infura.io/ipfs/${added.path}`;
         setIpfsUrl(url);
-        setLoading(false);
         addUploadedFile({
           name: file.name,
           url: url,
         });
       } catch (error) {
-        console.error("Error uploading file to IPFS: ", error);
+        console.error("Error in reader.onload:", error);
+      } finally {
         setLoading(false);
       }
     };
   };
 
-  const decryptFile = async (encryptedData, walletAddress) => {
+  const decryptFile = async (
+    encryptedContent,
+    encryptedSymmetricKeyHex,
+    iv,
+    walletAddress
+  ) => {
     try {
-      const decrypted = await window.ethereum.request({
+      // Decrypt the symmetric key using MetaMask
+      const decryptedSymmetricKeyBase64 = await window.ethereum.request({
         method: "eth_decrypt",
-        params: [encryptedData, walletAddress],
+        params: [encryptedSymmetricKeyHex, walletAddress],
       });
-      const decryptedBuffer = Buffer.from(decrypted, "base64");
-      const blob = new Blob([decryptedBuffer], { type: "image/png" });
-      const url = window.URL.createObjectURL(blob);
-      const element = document.createElement("a");
-      element.href = url;
-      element.download = "decrypted.png";
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      setDecryptedData(url);
-      return decryptedBuffer;
+
+      const symmetricKey = base64ToArrayBuffer(decryptedSymmetricKeyBase64);
+
+      // Import the symmetric key
+      const cryptoKey = await window.crypto.subtle.importKey(
+        "raw",
+        new Uint8Array(symmetricKey),
+        "AES-GCM",
+        false,
+        ["decrypt"]
+      );
+
+      // Decrypt the content
+      const decryptedContentArrayBuffer = await window.crypto.subtle.decrypt(
+        {
+          name: "AES-GCM",
+          iv: new Uint8Array(base64ToArrayBuffer(iv)),
+          tagLength: 128,
+        },
+        cryptoKey,
+        new Uint8Array(base64ToArrayBuffer(encryptedContent))
+      );
+
+      return decryptedContentArrayBuffer;
     } catch (error) {
       console.error("Error decrypting file:", error);
+      throw error;
     }
   };
 
@@ -120,11 +196,32 @@ const Upload = ({ addUploadedFile }) => {
       });
       const walletAddress = accounts[0];
       const key = ipfsUrl.replace("https://ipfs.infura.io/ipfs/", "");
+
+      // Fetch encrypted data from IPFS
       const enc_file_data = await client.cat(key);
       let enc_data = [];
-      for await (const chunk of enc_file_data) enc_data.push(chunk);
+      for await (const chunk of enc_file_data) {
+        enc_data.push(chunk);
+      }
       enc_data = Buffer.concat(enc_data).toString("utf8");
-      await decryptFile(enc_data, walletAddress);
+      const encryptedFile = JSON.parse(enc_data);
+
+      const { encryptedContent, encryptedSymmetricKey, iv } = encryptedFile;
+
+      // Decrypt the file
+      const decryptedContentArrayBuffer = await decryptFile(
+        encryptedContent,
+        encryptedSymmetricKey,
+        iv,
+        walletAddress
+      );
+
+      // Create a Blob from the decrypted content and generate a download link
+      const blob = new Blob([decryptedContentArrayBuffer], {
+        type: "application/octet-stream",
+      });
+      const url = window.URL.createObjectURL(blob);
+      setDecryptedData(url);
     } catch (error) {
       console.error("Error decrypting file from IPFS:", error);
     }
@@ -189,7 +286,7 @@ const Upload = ({ addUploadedFile }) => {
           </Typography>
           <a
             href={decryptedData}
-            download="decrypted.png"
+            download={fileName}
             className="decrypted-file-link"
           >
             Download Decrypted File
