@@ -1,4 +1,3 @@
-// src/components/Sidebar.js
 import React from "react";
 import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
@@ -22,7 +21,8 @@ const Sidebar = () => {
           }
         >
           <ListItemIcon className="sidebar-icon">
-            <HomeIcon />
+            <HomeIcon sx={{ color: "#ffffff" }} />{" "}
+            {/* Set icon color to white */}
           </ListItemIcon>
           <ListItemText primary="Home" />
         </ListItem>
@@ -37,7 +37,8 @@ const Sidebar = () => {
           }
         >
           <ListItemIcon className="sidebar-icon">
-            <UploadIcon />
+            <UploadIcon sx={{ color: "#ffffff" }} />{" "}
+            {/* Set icon color to white */}
           </ListItemIcon>
           <ListItemText primary="Upload" />
         </ListItem>

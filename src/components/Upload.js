@@ -3,20 +3,18 @@ import { Button, Typography } from "@mui/material";
 import { Buffer } from "buffer";
 import { create as ipfsHttpClient } from "ipfs-http-client";
 import { encrypt } from "@metamask/eth-sig-util";
+import "./Upload.css"; // Import the CSS file
 
 const Upload = ({ addUploadedFile }) => {
   const [fileName, setFileName] = useState("");
   const [ipfsUrl, setIpfsUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [decryptedData, setDecryptedData] = useState(null); // To store decrypted data
+  const [decryptedData, setDecryptedData] = useState(null);
   const projectId = "2IOUFPp6jaCvviGV7nMOkXaRtab";
   const projectSecret = "37d7e98f26e5136a5f6a6055fc1ca7db";
-  console.log("Project ID: ", projectId);
-  console.log("Project Secret: ", projectSecret);
   const authorization =
     "Basic " + Buffer.from(projectId + ":" + projectSecret).toString("base64");
 
-  // IPFS client instance
   const client = ipfsHttpClient({
     host: "ipfs.infura.io",
     port: 5001,
@@ -26,80 +24,61 @@ const Upload = ({ addUploadedFile }) => {
     },
   });
 
-  // Get MetaMask encryption public key
   const getWalletPublicKey = async () => {
     try {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      console.log("Accounts: ", accounts);
       const walletAddress = accounts[0];
-      console.log("Wallet Address: ", walletAddress);
-
       const publicKey = await window.ethereum.request({
         method: "eth_getEncryptionPublicKey",
         params: [walletAddress],
       });
-      console.log("Public Key: ", publicKey);
       if (!publicKey) {
         console.error("Encryption public key not found");
         return;
       }
-
       return publicKey;
     } catch (error) {
       console.error("Error fetching public key:", error);
     }
   };
 
-  // Encrypt file content using @metamask/eth-sig-util and the public key
   const encryptFile = async (fileContent, publicKey) => {
     try {
-      // Encrypt the file content using @metamask/eth-sig-util
       const encryptedMessage = encrypt({
-        publicKey, // MetaMask public key
-        data: Buffer.from(fileContent).toString("base64"), // File content to encrypt (as base64 string)
-        version: "x25519-xsalsa20-poly1305", // Required encryption version
+        publicKey,
+        data: Buffer.from(fileContent).toString("base64"),
+        version: "x25519-xsalsa20-poly1305",
       });
-
-      // Convert the encrypted message to JSON and then to a Buffer for upload
       const encryptedBuffer = Buffer.from(
         JSON.stringify(encryptedMessage),
         "utf-8"
       );
-
       return encryptedBuffer;
     } catch (error) {
       console.error("Error encrypting file: ", error);
     }
   };
 
-  // Handle file selection and upload to IPFS
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.readAsArrayBuffer(file); // Read as ArrayBuffer for binary files
+    reader.readAsArrayBuffer(file);
 
     reader.onload = async (event) => {
-      const fileContent = event.target.result; // ArrayBuffer
-
-      // Get MetaMask wallet public key
+      const fileContent = event.target.result;
       const publicKey = await getWalletPublicKey();
-
-      // Encrypt the file content
       const encryptedFile = await encryptFile(fileContent, publicKey);
 
       try {
         setLoading(true);
-        // Upload encrypted file to IPFS
         const added = await client.add(encryptedFile);
         const url = `https://ipfs.infura.io/ipfs/${added.path}`;
-        setIpfsUrl(url); // Store the IPFS URL for display
+        setIpfsUrl(url);
         setLoading(false);
-
-        // Add file to the global list
         addUploadedFile({
           name: file.name,
           url: url,
@@ -110,54 +89,41 @@ const Upload = ({ addUploadedFile }) => {
       }
     };
   };
-  // Decrypt the file using MetaMask
+
   const decryptFile = async (encryptedData, walletAddress) => {
     try {
       const decrypted = await window.ethereum.request({
         method: "eth_decrypt",
         params: [encryptedData, walletAddress],
       });
-
       const decryptedBuffer = Buffer.from(decrypted, "base64");
-
-      // Create a downloadable link for the decrypted image
       const blob = new Blob([decryptedBuffer], { type: "image/png" });
       const url = window.URL.createObjectURL(blob);
-
       const element = document.createElement("a");
       element.href = url;
       element.download = "decrypted.png";
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
-
       setDecryptedData(url);
-
       return decryptedBuffer;
     } catch (error) {
       console.error("Error decrypting file:", error);
     }
   };
 
-  // Handle decryption of file fetched from IPFS
   const handleDecryptFile = async (ipfsUrl) => {
     if (!ipfsUrl) return;
-
     try {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
       const walletAddress = accounts[0];
-
-      // Fetch the encrypted file from IPFS
       const key = ipfsUrl.replace("https://ipfs.infura.io/ipfs/", "");
       const enc_file_data = await client.cat(key);
-
       let enc_data = [];
       for await (const chunk of enc_file_data) enc_data.push(chunk);
       enc_data = Buffer.concat(enc_data).toString("utf8");
-
-      // Decrypt the encrypted data
       await decryptFile(enc_data, walletAddress);
     } catch (error) {
       console.error("Error decrypting file from IPFS:", error);
@@ -165,46 +131,67 @@ const Upload = ({ addUploadedFile }) => {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <Typography variant="h5">
+    <div className="upload-container">
+      <Typography variant="h5" className="upload-title">
         Upload a File to IPFS with Encryption
       </Typography>
-      <input type="file" onChange={handleFileChange} />
+      <div className="file-input-container">
+        <input
+          type="file"
+          id="file-input"
+          className="file-input"
+          onChange={handleFileChange}
+        />
+        <label htmlFor="file-input" className="file-input-label">
+          Choose file
+        </label>
+        <span className="file-name">{fileName || "No file chosen"}</span>
+      </div>
       <Button
         variant="contained"
         color="primary"
-        style={{ marginTop: "20px" }}
+        className="upload-button"
         disabled={loading}
+        onClick={() => document.getElementById("file-input").click()}
       >
         {loading ? "Uploading..." : "Encrypt and Upload File"}
       </Button>
 
       {ipfsUrl && (
-        <>
-          <Typography variant="h6" style={{ marginTop: "20px" }}>
+        <div className="uploaded-file-container">
+          <Typography variant="h6" className="uploaded-file-title">
             File uploaded to IPFS:
           </Typography>
-          <a href={ipfsUrl} target="_blank" rel="noopener noreferrer">
+          <a
+            href={ipfsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="uploaded-file-link"
+          >
             {fileName} - {ipfsUrl}
           </a>
           <Button
             variant="contained"
             color="primary"
-            style={{ marginTop: "20px" }}
+            className="decrypt-button"
             disabled={loading}
             onClick={() => handleDecryptFile(ipfsUrl)}
           >
             Decrypt File
           </Button>
-        </>
+        </div>
       )}
 
       {decryptedData && (
-        <div>
-          <Typography variant="h6" style={{ marginTop: "20px" }}>
+        <div className="decrypted-file-container">
+          <Typography variant="h6" className="decrypted-file-title">
             Decrypted File Content:
           </Typography>
-          <a href={decryptedData} download="decrypted.png">
+          <a
+            href={decryptedData}
+            download="decrypted.png"
+            className="decrypted-file-link"
+          >
             Download Decrypted File
           </a>
         </div>

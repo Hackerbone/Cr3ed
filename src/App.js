@@ -40,7 +40,7 @@ function App() {
 
   return (
     <Router>
-      <div style={{ display: "flex" }}>
+      <div style={{ background: "#1e1e1e", display: "flex" }}>
         <Sidebar />
         <div style={{ flexGrow: 1 }}>
           <Header />
