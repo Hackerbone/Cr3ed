@@ -3,17 +3,6 @@ export const contractABI = [
   {
     inputs: [
       {
-        internalType: "string",
-        name: "_orgName",
-        type: "string",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    inputs: [
-      {
         internalType: "address",
         name: "_employeeAddress",
         type: "address",
@@ -94,19 +83,6 @@ export const contractABI = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "admin",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [
       {
         internalType: "string",
@@ -135,6 +111,43 @@ export const contractABI = [
     name: "deleteEmployeeFromGroup",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_publicKey",
+        type: "string",
+      },
+    ],
+    name: "setPublicKey",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_orgName",
+        type: "string",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    inputs: [],
+    name: "admin",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -394,22 +407,9 @@ export const contractABI = [
     stateMutability: "view",
     type: "function",
   },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_publicKey",
-        type: "string",
-      },
-    ],
-    name: "setPublicKey",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
 ];
 
 // Contract Address (from Remix deployment)
-export const contractAddress = "0x8AF5500e512c1b81fc2F14A0a561aA57a58D1466";
+export const contractAddress = "0xD84Df6b834e1c236d2bf4975E2088FaB373eB20E";
 
-// https://sepolia.etherscan.io/tx/0xb35dd37c617570aa96eb408203f7799fd5fcccbd41418e7dec603e3bfdd0525a
+// https://sepolia.etherscan.io/tx/0x9a2dd5efe80c9dd068c6b20f82978e88f45d6aa720cf7e64ed21009fcf7b11a8

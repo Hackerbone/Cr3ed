@@ -1,4 +1,3 @@
-// src/components/Header.js
 import React, { useState, useEffect } from "react";
 import {
   AppBar,
@@ -23,7 +22,6 @@ const Header = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [walletAddress, setWalletAddress] = useState(null);
 
-  // Access selected group from Redux store and use dispatch to update it
   const selectedGroupName = useSelector((state) => state.app.selectedGroup);
   const dispatch = useDispatch();
 
@@ -70,6 +68,34 @@ const Header = () => {
     };
     fetchGroupNames();
   }, [contract]);
+
+  // Handle MetaMask account change
+  useEffect(() => {
+    const handleAccountsChanged = (accounts) => {
+      console.log("Accounts changed:", accounts);
+      if (accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+      } else {
+        setWalletAddress(null);
+        setErrorMessage("Please connect to MetaMask.");
+      }
+    };
+
+    if (window.ethereum) {
+      console.log("Listening for account changes...");
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+    }
+
+    return () => {
+      if (window.ethereum) {
+        console.log("Removing account change listener...");
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
+      }
+    };
+  }, []);
 
   const connectWallet = async () => {
     if (window.ethereum) {

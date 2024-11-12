@@ -24,6 +24,7 @@ const UploadComponent = ({ addUploadedFile }) => {
   const [fileIndex, setFileIndex] = useState(0); // Index of the file in the group's file array
   const [groupNames, setGroupNames] = useState([]);
   // Replace with your actual Infura project credentials
+  const [settingPublicKey, setSettingPublicKey] = useState(false); // Loading state for public key setup
 
   const projectId = "2IOUFPp6jaCvviGV7nMOkXaRtab";
   const projectSecret = "37d7e98f26e5136a5f6a6055fc1ca7db";
@@ -135,14 +136,29 @@ const UploadComponent = ({ addUploadedFile }) => {
 
   // Function to set user's public key in the contract
   const setPublicKey = async () => {
+    setSettingPublicKey(true);
     try {
-      const publicKey = await getWalletPublicKey();
-      const tx = await contract.setPublicKey(publicKey);
-      await tx.wait();
-      message.success("Public key set successfully!");
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const walletAddress = accounts[0];
+      const publicKey = await window.ethereum.request({
+        method: "eth_getEncryptionPublicKey",
+        params: [walletAddress],
+      });
+
+      if (publicKey) {
+        const tx = await contract.setPublicKey(publicKey);
+        await tx.wait();
+        message.success("Public key set successfully!");
+      } else {
+        throw new Error("Encryption public key not found");
+      }
     } catch (error) {
       console.error("Error setting public key:", error);
       message.error("Error setting public key. Please try again.");
+    } finally {
+      setSettingPublicKey(false);
     }
   };
 
@@ -269,7 +285,8 @@ const UploadComponent = ({ addUploadedFile }) => {
           const encryptedSymmetricKeys = Object.values(
             encryptedFile.encryptedSymmetricKeys
           );
-
+          console.log("Encrypted symmetric keys:", encryptedSymmetricKeys);
+          console.log("Shared with addresses:", sharedWithAddresses);
           // Call smart contract to store file metadata
           const tx = await contract.addFileToGroup(
             groupName,
@@ -447,12 +464,18 @@ const UploadComponent = ({ addUploadedFile }) => {
           </Select>
         </Form.Item>
 
+        {/* Set Public Key Button */}
         <Form.Item>
-          <Button type="primary" onClick={setPublicKey}>
-            Set My Public Key
+          <Button
+            type="primary"
+            onClick={setPublicKey}
+            loading={settingPublicKey}
+          >
+            {settingPublicKey ? "Setting Public Key..." : "Set My Public Key"}
           </Button>
         </Form.Item>
 
+        {/* File Upload Button */}
         <Form.Item>
           <Upload
             beforeUpload={handleFileUpload}
@@ -464,7 +487,7 @@ const UploadComponent = ({ addUploadedFile }) => {
               type="primary"
               icon={<UploadOutlined />}
               loading={uploading}
-              disabled={uploading}
+              disabled={uploading || settingPublicKey}
             >
               {uploading ? "Uploading..." : "Encrypt and Upload File"}
             </Button>
