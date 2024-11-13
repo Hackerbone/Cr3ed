@@ -41,3 +41,7 @@ code {
 .ant-typography h6 {
   color: #ffffff !important; /* Set text color to white */
 }
+
+.ant-form-item-label label{
+  color: #ffffff !important; /* Set text color to white */
+}
